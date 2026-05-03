@@ -1,0 +1,16 @@
+#!/bin/bash
+MVN_VERSION="3.9.5"
+MVN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-${MVN_VERSION}"
+MVN_JAR="${MVN_HOME}/lib/maven-wrapper.jar"
+
+if [ ! -f "$MVN_JAR" ] || [ ! -d "$MVN_HOME" ]; then
+  mkdir -p "$(dirname $MVN_JAR)"
+  DIST_URL="https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MVN_VERSION}/apache-maven-${MVN_VERSION}-bin.zip"
+  curl -sL "$DIST_URL" -o "/tmp/apache-maven-${MVN_VERSION}.zip"
+  unzip -q "/tmp/apache-maven-${MVN_VERSION}.zip" -d "$(dirname $MVN_HOME)"
+  mv "$(dirname $MVN_HOME)/apache-maven-${MVN_VERSION}" "$MVN_HOME"
+  rm "/tmp/apache-maven-${MVN_VERSION}.zip"
+  cp "${MVN_HOME}/bin/maven-wrapper.jar" "$MVN_JAR" 2>/dev/null || cp "${MVN_HOME}/lib/maven-wrapper.jar" "$MVN_JAR" 2>/dev/null || true
+fi
+
+exec java -cp "$MVN_JAR" org.apache.maven.wrapper.MavenWrapperMain "$@" 
