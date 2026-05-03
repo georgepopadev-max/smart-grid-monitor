@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Grid Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 32px;
+            background: linear-gradient(180deg, rgba(20,20,28,1) 0%, rgba(10,10,15,0) 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00d4aa 0%, #00a884 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: #0a0a0f;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #00d4aa;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #00d4aa;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+            margin-top: 80px;
+            position: relative;
+        }
+
+        .grid-container {
+            flex: 1;
+            position: relative;
+            padding: 20px;
+        }
+
+        #gridCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .telemetry-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(20, 20, 28, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+        }
+
+        .telemetry-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .telemetry-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(0,212,170,0.3);
+        }
+
+        .telemetry-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .telemetry-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .telemetry-value.warning {
+            color: #ffaa00;
+        }
+
+        .telemetry-value.critical {
+            color: #ff3d71;
+        }
+
+        .telemetry-unit {
+            font-size: 12px;
+            color: #888;
+            margin-left: 4px;
+        }
+
+        .side-panel {
+            width: 380px;
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            padding: 24px;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: fixed;
+            right: 0;
+            top: 80px;
+            bottom: 100px;
+            overflow-y: auto;
+            z-index: 60;
+        }
+
+        .side-panel.open {
+            transform: translateX(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .panel-subtitle {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            color: #888;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .gauges {
+            display: grid;
+            gap: 20px;
+        }
+
+        .gauge {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .gauge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .gauge-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .gauge-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gauge-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4aa, #00f5c4);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .gauge-fill.warning {
+            background: linear-gradient(90deg, #ff8800, #ffaa00);
+        }
+
+        .gauge-fill.critical {
+            background: linear-gradient(90deg, #ff2255, #ff3d71);
+        }
+
+        .sparkline-container {
+            margin-top: 24px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .sparkline-title {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        #sparklineCanvas {
+            width: 100%;
+            height: 80px;
+        }
+
+        .alert-banner {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(255,45,113,0.95), rgba(255,61,113,0.9));
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transform: translateY(-120%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(255,45,113,0.3);
+        }
+
+        .alert-banner.show {
+            transform: translateY(0);
+        }
+
+        .alert-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+        }
+
+        .alert-text h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .alert-text p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .alert-btn {
+            background: #fff;
+            color: #ff3d71;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .alert-btn:hover {
+            background: rgba(255,255,255,0.9);
+            transform: scale(1.02);
+        }
+
+        .node-info {
+            position: absolute;
+            background: rgba(10, 10, 15, 0.95);
+            border: 1px solid rgba(0,212,170,0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .node-info.show {
+            opacity: 1;
+        }
+
+        .node-info-name {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .node-info-volt {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <h1>Smart Grid Monitor</h1>
+        </div>
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>System Online — Live Monitoring</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="grid-container">
+            <canvas id="gridCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-header">
+            <div>
+                <div class="panel-title" id="panelNodeName">Select a Node</div>
+                <div class="panel-subtitle" id="panelNodeVoltage">Click any node to view telemetry</div>
+            </div>
+            <button class="close-btn" onclick="closePanel()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="gauges">
+            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Voltage</span>
+                    <span class="gauge-value" id="gaugeVoltage">--</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="voltageFill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Frequency</span>
+                    <span class="gauge-value" id="gaugeFrequency">--</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="frequencyFill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Power Factor</span>
+                    <span class="gauge-value" id="gaugePowerFactor">--</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="powerFactorFill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="gauge">
+                <div class="gauge-header">
+                    <span class="gauge-label">Load</span>
+                    <span class="gauge-value" id="gaugeLoad">--</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="loadFill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="sparkline-container">
+            <div class="sparkline-title">Voltage History (Last 20 readings)</div>
+            <canvas id="sparklineCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="alert-banner" id="alertBanner">
+        <div class="alert-content">
+            <div class="alert-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19h-17L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+            </div>
+            <div class="alert-text">
+                <h3 id="alertTitle">Fault Detected</h3>
+                <p id="alertMessage">Voltage anomaly detected in Bilbao North</p>
+            </div>
+        </div>
+        <button class="alert-btn" onclick="acknowledgeAlert()">Acknowledge</button>
+    </div>
+
+    <div class="telemetry-bar">
+        <div class="telemetry-card">
+            <div class="telemetry-label">Total Load</div>
+            <div class="telemetry-value" id="totalLoad">0<span class="telemetry-unit">MW</span></div>
+        </div>
+        <div class="telemetry-card">
+            <div class="telemetry-label">Avg Voltage</div>
+            <div class="telemetry-value" id="avgVoltage">0<span class="telemetry-unit">kV</span></div>
+        </div>
+        <div class="telemetry-card">
+            <div class="telemetry-label">Grid Frequency</div>
+            <div class="telemetry-value" id="gridFrequency">50.00<span class="telemetry-unit">Hz</span></div>
+        </div>
+        <div class="telemetry-card">
+            <div class="telemetry-label">Active Alerts</div>
+            <div class="telemetry-value" id="activeAlerts">0</div>
+        </div>
+    </div>
+
+    <div class="node-info" id="nodeInfo">
+        <div class="node-info-name">Bilbao North</div>
+        <div class="node-info-volt">220kV</div>
+    </div>
+
+    <script>
+        const nodes = [
+            { id: 0, name: 'Bilbao North', voltage: '220kV', x: 0.2, y: 0.25, baseVoltage: 220, currentVoltage: 220, frequency: 50.0, powerFactor: 0.95, load: 45, status: 'normal', history: [] },
+            { id: 1, name: 'Bilbao South', voltage: '220kV', x: 0.25, y: 0.6, baseVoltage: 218, currentVoltage: 218, frequency: 49.98, powerFactor: 0.94, load: 52, status: 'normal', history: [] },
+            { id: 2, name: 'Getxo Hub', voltage: '132kV', x: 0.35, y: 0.35, baseVoltage: 132, currentVoltage: 132, frequency: 50.02, powerFactor: 0.97, load: 38, status: 'normal', history: [] },
+            { id: 3, name: 'Durango Center', voltage: '132kV', x: 0.5, y: 0.5, baseVoltage: 131, currentVoltage: 131, frequency: 49.99, powerFactor: 0.93, load: 41, status: 'normal', history: [] },
+            { id: 4, name: 'Bermeo Offshore', voltage: '400kV', x: 0.75, y: 0.3, baseVoltage: 398, currentVoltage: 398, frequency: 50.01, powerFactor: 0.99, load: 65, status: 'normal', history: [] },
+            { id: 5, name: 'San Juan Offshore', voltage: '400kV', x: 0.8, y: 0.65, baseVoltage: 401, currentVoltage: 401, frequency: 49.97, powerFactor: 0.98, load: 58, status: 'normal', history: [] }
+        ];
+
+        const connections = [
+            [0, 1], [0, 2], [1, 2], [2, 3], [3, 4], [4, 5], [2, 4], [1, 3], [3, 5]
+        ];
+
+        const pulses = [];
+        let selectedNode = null;
+        let canvas, ctx, sparklineCanvas, sparklineCtx;
+        let canvasWidth, canvasHeight;
+        let nodePositions = [];
+
+        function init() {
+            canvas = document.getElementById('gridCanvas');
+            ctx = canvas.getContext('2d');
+            sparklineCanvas = document.getElementById('sparklineCanvas');
+            sparklineCtx = sparklineCanvas.getContext('2d');
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousemove', handleCanvasHover);
+
+            initPulses();
+            requestAnimationFrame(animate);
+            setInterval(updateTelemetry, 800);
+            setInterval(simulateFault, Math.random() * 10000 + 10000);
+
+            updateSparklineCanvas();
+        }
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            canvasWidth = rect.width;
+            canvasHeight = rect.height;
+
+            nodePositions = nodes.map(n => ({
+                x: n.x * canvasWidth,
+                y: n.y * canvasHeight
+            }));
+        }
+
+        function initPulses() {
+            connections.forEach(([a, b]) => {
+                for (let i = 0; i < 2; i++) {
+                    pulses.push({
+                        conn: [a, b],
+                        progress: Math.random(),
+                        speed: 0.003 + Math.random() * 0.002,
+                        size: 3 + Math.random() * 2,
+                        alpha: 0.7 + Math.random() * 0.3
+                    });
+                }
+            });
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw grid lines background
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvasWidth; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvasHeight);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvasHeight; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvasWidth, i);
+                ctx.stroke();
+            }
+
+            // Draw connections
+            connections.forEach(([a, b]) => {
+                const pA = nodePositions[a];
+                const pB = nodePositions[b];
+
+                // Line glow
+                const gradient = ctx.createLinearGradient(pA.x, pA.y, pB.x, pB.y);
+                gradient.addColorStop(0, 'rgba(0,212,170,0.2)');
+                gradient.addColorStop(0.5, 'rgba(0,212,170,0.4)');
+                gradient.addColorStop(1, 'rgba(0,212,170,0.2)');
+
+                ctx.beginPath();
+                ctx.moveTo(pA.x, pA.y);
+                ctx.lineTo(pB.x, pB.y);
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Core line
+                ctx.beginPath();
+                ctx.moveTo(pA.x, pA.y);
+                ctx.lineTo(pB.x, pB.y);
+                ctx.strokeStyle = 'rgba(0,212,170,0.6)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // Draw nodes
+            nodes.forEach((node, i) => {
+                const pos = nodePositions[i];
+                const isSelected = selectedNode === i;
+                const baseRadius = isSelected ? 22 : 18;
+                let statusColor = '#00d4aa';
+
+                if (node.status === 'critical') {
+                    statusColor = '#ff3d71';
+                } else if (node.status === 'warning') {
+                    statusColor = '#ffaa00';
+                }
+
+                // Outer glow
+                if (isSelected) {
+                    const glow = ctx.createRadialGradient(pos.x, pos.y, baseRadius, pos.x, pos.y, baseRadius + 15);
+                    glow.addColorStop(0, statusColor + '40');
+                    glow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, baseRadius + 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Main node circle
+                const nodeGradient = ctx.createRadialGradient(pos.x - 5, pos.y - 5, 0, pos.x, pos.y, baseRadius);
+                nodeGradient.addColorStop(0, '#ffffff');
+                nodeGradient.addColorStop(0.3, statusColor);
+                nodeGradient.addColorStop(1, statusColor + '80');
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, baseRadius, 0, Math.PI * 2);
+                ctx.fillStyle = nodeGradient;
+                ctx.fill();
+
+                // Inner highlight
+                ctx.beginPath();
+                ctx.arc(pos.x - 4, pos.y - 4, baseRadius * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.fill();
+
+                // Node label
+                ctx.fillStyle = '#fff';
+                ctx.font = '11px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.name, pos.x, pos.y + baseRadius + 18);
+                ctx.fillStyle = '#888';
+                ctx.font = '10px Segoe UI';
+                ctx.fillText(node.voltage, pos.x, pos.y + baseRadius + 30);
+            });
+        }
+
+        function updatePulses() {
+            pulses.forEach(pulse => {
+                pulse.progress += pulse.speed;
+                if (pulse.progress > 1) {
+                    pulse.progress = 0;
+                    pulse.speed = 0.003 + Math.random() * 0.002;
+                }
+            });
+        }
+
+        function drawPulses() {
+            pulses.forEach(pulse => {
+                const [a, b] = pulse.conn;
+                const pA = nodePositions[a];
+                const pB = nodePositions[b];
+                const x = pA.x + (pB.x - pA.x) * pulse.progress;
+                const y = pA.y + (pB.y - pA.y) * pulse.progress;
+
+                // Pulse glow
+                const glow = ctx.createRadialGradient(x, y, 0, x, y, pulse.size * 3);
+                glow.addColorStop(0, `rgba(0,212,170,${pulse.alpha})`);
+                glow.addColorStop(0.5, `rgba(0,212,170,${pulse.alpha * 0.3})`);
+                glow.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(x, y, pulse.size * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pulse core
+                ctx.fillStyle = `rgba(0,245,196,${pulse.alpha})`;
+                ctx.beginPath();
+                ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function animate() {
+            drawGrid();
+            updatePulses();
+            drawPulses();
+            requestAnimationFrame(animate);
+        }
+
+        function updateTelemetry() {
+            nodes.forEach(node => {
+                // Simulate realistic fluctuations
+                node.currentVoltage = node.baseVoltage + (Math.random() - 0.5) * 6;
+                node.frequency = 50 + (Math.random() - 0.5) * 0.1;
+                node.powerFactor = Math.min(0.99, Math.max(0.85, node.powerFactor + (Math.random() - 0.5) * 0.02));
+                node.load = Math.min(95, Math.max(15, node.load + Math.floor((Math.random() - 0.5) * 5)));
+
+                // Add to history
+                node.history.push(node.currentVoltage);
+                if (node.history.length > 20) node.history.shift();
+
+                // Check for warning/critical states
+                if (node.currentVoltage < node.baseVoltage * 0.9 || node.frequency < 49.8 || node.frequency > 50.2) {
+                    node.status = 'warning';
+                } else {
+                    node.status = 'normal';
+                }
+            });
+
+            // Update telemetry bar
+            const totalLoad = nodes.reduce((sum, n) => sum + n.load, 0);
+            const avgVoltage = nodes.reduce((sum, n) => sum + n.currentVoltage, 0) / nodes.length;
+            const avgFreq = nodes.reduce((sum, n) => sum + n.frequency, 0) / nodes.length;
+            const alertCount = nodes.filter(n => n.status !== 'normal').length;
+
+            document.getElementById('totalLoad').innerHTML = totalLoad + '<span class="telemetry-unit">MW</span>';
+            document.getElementById('avgVoltage').innerHTML = avgVoltage.toFixed(1) + '<span class="telemetry-unit">kV</span>';
+            document.getElementById('gridFrequency').innerHTML = avgFreq.toFixed(2) + '<span class="telemetry-unit">Hz</span>';
+
+            const alertsEl = document.getElementById('activeAlerts');
+            alertsEl.textContent = alertCount;
+            alertsEl.className = 'telemetry-value' + (alertCount > 0 ? ' critical' : '');
+
+            // Update side panel if open
+            if (selectedNode !== null) {
+                updateSidePanel(selectedNode);
+            }
+        }
+
+        function simulateFault() {
+            const normalNodes = nodes.filter(n => n.status !== 'critical');
+            if (normalNodes.length === 0) return;
+
+            const targetNode = normalNodes[Math.floor(Math.random() * normalNodes.length)];
+            targetNode.status = 'critical';
+            targetNode.currentVoltage = targetNode.baseVoltage * (0.7 + Math.random() * 0.15);
+            targetNode.frequency = 49.5 + Math.random() * 0.3;
+
+            showAlert(targetNode);
+
+            // Auto-recover after 8 seconds
+            setTimeout(() => {
+                if (targetNode.status === 'critical') {
+                    targetNode.status = 'normal';
+                    targetNode.currentVoltage = targetNode.baseVoltage;
+                    targetNode.frequency = 50;
+                }
+            }, 8000);
+        }
+
+        function showAlert(node) {
+            const banner = document.getElementById('alertBanner');
+            document.getElementById('alertTitle').textContent = 'Fault Detected';
+            document.getElementById('alertMessage').textContent = `${node.name} experiencing voltage anomaly (${node.currentVoltage.toFixed(1)}kV)`;
+            banner.classList.add('show');
+
+            const alertsEl = document.getElementById('activeAlerts');
+            alertsEl.textContent = parseInt(alertsEl.textContent) + 1;
+            alertsEl.className = 'telemetry-value critical';
+        }
+
+        function acknowledgeAlert() {
+            document.getElementById('alertBanner').classList.remove('show');
+            const alertsEl = document.getElementById('activeAlerts');
+            alertsEl.textContent = Math.max(0, parseInt(alertsEl.textContent) - 1);
+            if (parseInt(alertsEl.textContent) === 0) {
+                alertsEl.className = 'telemetry-value';
+            }
+        }
+
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            nodePositions.forEach((pos, i) => {
+                const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+                if (dist < 25) {
+                    selectedNode = i;
+                    openPanel(nodes[i]);
+                }
+            });
+        }
+
+        function handleCanvasHover(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const info = document.getElementById('nodeInfo');
+            let found = false;
+
+            nodePositions.forEach((pos, i) => {
+                const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+                if (dist < 25) {
+                    info.style.left = (rect.left + pos.x + 30) + 'px';
+                    info.style.top = (rect.top + pos.y - 20) + 'px';
+                    info.querySelector('.node-info-name').textContent = nodes[i].name;
+                    info.querySelector('.node-info-volt').textContent = nodes[i].voltage + ' — ' + nodes[i].currentVoltage.toFixed(1) + 'kV';
+                    info.classList.add('show');
+                    found = true;
+                    canvas.style.cursor = 'pointer';
+                }
+            });
+
+            if (!found) {
+                info.classList.remove('show');
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        function openPanel(node) {
+            const panel = document.getElementById('sidePanel');
+            panel.classList.add('open');
+            updateSidePanel(node.id);
+        }
+
+        function closePanel() {
+            document.getElementById('sidePanel').classList.remove('open');
+            selectedNode = null;
+        }
+
+        function updateSidePanel(nodeId) {
+            const node = nodes[nodeId];
+            document.getElementById('panelNodeName').textContent = node.name;
+            document.getElementById('panelNodeVoltage').textContent = node.voltage + ' — ' + node.currentVoltage.toFixed(1) + 'kV';
+
+            document.getElementById('gaugeVoltage').textContent = node.currentVoltage.toFixed(1) + ' kV';
+            document.getElementById('gaugeFrequency').textContent = node.frequency.toFixed(2) + ' Hz';
+            document.getElementById('gaugePowerFactor').textContent = node.powerFactor.toFixed(3);
+            document.getElementById('gaugeLoad').textContent = node.load + ' MW';
+
+            // Update gauge fills
+            const voltageFill = document.getElementById('voltageFill');
+            const voltagePct = (node.currentVoltage / (node.baseVoltage * 1.1)) * 100;
+            voltageFill.style.width = Math.min(100, voltagePct) + '%';
+            voltageFill.className = 'gauge-fill' + (node.status === 'critical' ? ' critical' : node.status === 'warning' ? ' warning' : '');
+
+            const freqFill = document.getElementById('frequencyFill');
+            const freqPct = ((node.frequency - 49) / 2) * 100;
+            freqFill.style.width = Math.min(100, Math.max(0, freqPct)) + '%';
+            freqFill.className = 'gauge-fill' + (node.frequency < 49.8 || node.frequency > 50.2 ? ' warning' : '');
+
+            const pfFill = document.getElementById('powerFactorFill');
+            pfFill.style.width = (node.powerFactor * 100) + '%';
+            pfFill.className = 'gauge-fill' + (node.powerFactor < 0.9 ? ' warning' : '');
+
+            const loadFill = document.getElementById('loadFill');
+            loadFill.style.width = node.load + '%';
+            loadFill.className = 'gauge-fill' + (node.load > 80 ? ' warning' : '');
+
+            drawSparkline(node.history);
+        }
+
+        function updateSparklineCanvas() {
+            const rect = sparklineCanvas.parentElement.getBoundingClientRect();
+            sparklineCanvas.width = (rect.width - 32) * window.devicePixelRatio;
+            sparklineCanvas.height = 80 * window.devicePixelRatio;
+            sparklineCanvas.style.width = (rect.width - 32) + 'px';
+            sparklineCanvas.style.height = '80px';
+            sparklineCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        function drawSparkline(history) {
+            if (!selectedNode) return;
+
+            const width = sparklineCanvas.width / window.devicePixelRatio;
+            const height = sparklineCanvas.height / window.devicePixelRatio;
+
+            sparklineCtx.clearRect(0, 0, width, height);
+
+            if (history.length < 2) return;
+
+            const min = Math.min(...history) - 5;
+            const max = Math.max(...history) + 5;
+            const range = max - min || 1;
+
+            const node = nodes[selectedNode];
+
+            // Draw area
+            sparklineCtx.beginPath();
+            sparklineCtx.moveTo(0, height);
+            history.forEach((v, i) => {
+                const x = (i / (history.length - 1)) * width;
+                const y = height - ((v - min) / range) * (height - 10) - 5;
+                if (i === 0) {
+                    sparklineCtx.lineTo(x, y);
+                } else {
+                    sparklineCtx.lineTo(x, y);
+                }
+            });
+            sparklineCtx.lineTo(width, height);
+            sparklineCtx.closePath();
+
+            const areaGradient = sparklineCtx.createLinearGradient(0, 0, 0, height);
+            areaGradient.addColorStop(0, node.status === 'critical' ? 'rgba(255,61,113,0.4)' : 'rgba(0,212,170,0.4)');
+            areaGradient.addColorStop(1, 'transparent');
+            sparklineCtx.fillStyle = areaGradient;
+            sparklineCtx.fill();
+
+            // Draw line
+            sparklineCtx.beginPath();
+            history.forEach((v, i) => {
+                const x = (i / (history.length - 1)) * width;
+                const y = height - ((v - min) / range) * (height - 10) - 5;
+                if (i === 0) {
+                    sparklineCtx.moveTo(x, y);
+                } else {
+                    sparklineCtx.lineTo(x, y);
+                }
+            });
+            sparklineCtx.strokeStyle = node.status === 'critical' ? '#ff3d71' : node.status === 'warning' ? '#ffaa00' : '#00d4aa';
+            sparklineCtx.lineWidth = 2;
+            sparklineCtx.stroke();
+        }
+
+        window.addEventListener('resize', updateSparklineCanvas);
+        init();
+    </script>
+</body>
+</html>
