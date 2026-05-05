@@ -72,27 +72,30 @@ export class AppComponent implements OnInit, OnDestroy {
   connections: any[] = [];
   activeAlerts: any[] = [];
   selectedNode: any = null;
+  isUsingMockData = false;
 
   constructor(private wsService: WebSocketService) {}
 
   ngOnInit(): void {
-    // For demo purposes, we'll simulate data since backend might not be running
-    this.initializeSimulatedData();
-    
-    // Try to connect to WebSocket
-    try {
-      this.wsService.connect('ws://localhost:8080/grid-websocket');
-      
-      this.wsService.state$.pipe(
-        takeUntil(this.destroy$)
-      ).subscribe(state => {
-        if (state) {
-          this.updateFromState(state);
-        }
-      });
-    } catch (e) {
-      console.log('WebSocket connection not available, using simulated data');
-    }
+    // Subscribe to connection status to track if we're using mock data
+    this.wsService.status$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(status => {
+      this.isUsingMockData = status === 'disconnected' && this.nodes.length === 0;
+    });
+
+    // Connect to WebSocket (will fallback to mock data if unavailable)
+    this.wsService.connect();
+
+    // Subscribe to grid state updates
+    this.wsService.state$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(state => {
+      if (state) {
+        this.updateFromState(state);
+        this.currentGridName = state.gridName;
+      }
+    });
   }
 
   ngOnDestroy(): void {
