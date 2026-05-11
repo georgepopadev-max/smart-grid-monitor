@@ -23,6 +23,13 @@ import { takeUntil } from 'rxjs/operators';
   ],
   template: `
     <div class="app-container">
+      <!-- Demo Mode Banner -->
+      <div class="demo-banner" *ngIf="isUsingMockData">
+        <span class="demo-icon">⚠️</span>
+        <span class="demo-text">DEMO MODE - Simulated data for portfolio showcase</span>
+        <span class="demo-badge">SIMULATED</span>
+      </div>
+
       <app-header [gridName]="currentGridName" (gridChange)="onGridChange($event)"></app-header>
       
       <div class="main-content">
@@ -62,6 +69,27 @@ import { takeUntil } from 'rxjs/operators';
       display: flex;
       position: relative;
       overflow: hidden;
+    }
+    .demo-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 2px solid #f39c12;
+    }
+    .demo-icon { font-size: 16px; }
+    .demo-text { font-size: 12px; color: #f39c12; font-weight: 600; }
+    .demo-badge {
+      background: #f39c1230;
+      color: #f39c12;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 1px solid #f39c12;
     }
   `]
 })
