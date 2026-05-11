@@ -5,7 +5,7 @@ import { TelemetryPanelComponent } from './features/telemetry/telemetry-panel.co
 import { AlertBannerComponent } from './features/alerts/alert-banner.component';
 import { TimelineScrubberComponent } from './features/grid-canvas/timeline-scrubber.component';
 import { HeaderComponent } from './shared/components/header.component';
-import { WebSocketService, GridState } from './core/websocket/websocket.service';
+import { WebSocketService, GridState, GridNode, GridConnection, Alert } from './core/websocket/websocket.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -68,10 +68,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   currentGridName = 'Suburban Distribution';
-  nodes: any[] = [];
-  connections: any[] = [];
-  activeAlerts: any[] = [];
-  selectedNode: any = null;
+  nodes: GridNode[] = [];
+  connections: GridConnection[] = [];
+  activeAlerts: Alert[] = [];
+  selectedNode: GridNode | null = null;
   isUsingMockData = false;
 
   constructor(private wsService: WebSocketService) {}
@@ -164,7 +164,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // In a real app, would switch grid configurations
   }
 
-  onNodeSelected(node: any): void {
+  onNodeSelected(node: GridNode | null): void {
     this.selectedNode = node;
   }
 
