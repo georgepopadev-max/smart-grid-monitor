@@ -23,7 +23,6 @@ public class GridConnection {
         this.active = true;
     }
 
-    // Getters and Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public UUID getSourceNodeId() { return sourceNodeId; }

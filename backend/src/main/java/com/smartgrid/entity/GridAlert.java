@@ -1,17 +1,36 @@
-package com.smartgrid.model;
+package com.smartgrid.entity;
 
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
+@Entity
+@Table(name = "grid_alerts")
 public class GridAlert {
+    @Id
     private UUID id;
+    
+    @Column(name = "node_id")
     private UUID nodeId;
+    
+    @Column(name = "node_name")
     private String nodeName;
+    
+    @Enumerated(EnumType.STRING)
     private AlertType type;
+    
+    @Enumerated(EnumType.STRING)
     private AlertSeverity severity;
-    private Instant triggeredAt;
+    
+    @Column(name = "triggered_at")
+    private Instant triggeredAt = Instant.now();
+    
+    @Column(name = "acknowledged_by")
     private String acknowledgedBy;
+    
+    @Column(name = "resolved_at")
     private Instant resolvedAt;
+    
     private String notes;
 
     public GridAlert() {}
@@ -22,7 +41,6 @@ public class GridAlert {
         this.nodeName = nodeName;
         this.type = type;
         this.severity = severity;
-        this.triggeredAt = Instant.now();
     }
 
     public enum AlertType {
@@ -30,7 +48,7 @@ public class GridAlert {
     }
 
     public enum AlertSeverity {
-        LOW, MEDIUM, HIGH, CRITICAL, WARNING
+        LOW, MEDIUM, HIGH, CRITICAL
     }
 
     public UUID getId() { return id; }
