@@ -1,6 +1,9 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { WebSocketService } from '../../core/websocket/websocket.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-header',
@@ -108,17 +111,32 @@ import { FormsModule } from '@angular/forms';
     }
   `]
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit, OnDestroy {
   @Input() gridName = 'Suburban Distribution';
   @Output() gridChange = new EventEmitter<string>();
 
+  private destroy$ = new Subject<void>();
+
   selectedGrid = 'suburban';
-  wsConnected = true;
+  wsConnected = false;
   currentTime = '';
 
-  constructor() {
+  constructor(private wsService: WebSocketService) {
     this.updateTime();
     setInterval(() => this.updateTime(), 1000);
+  }
+
+  ngOnInit(): void {
+    this.wsService.status$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(status => {
+      this.wsConnected = status === 'connected';
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private updateTime(): void {
