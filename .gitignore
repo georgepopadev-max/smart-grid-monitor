@@ -20,3 +20,7 @@ frontend/dist/
 
 # Logs
 *.log
+# Java/Spring Boot
+target/
+*.class
+*.jar

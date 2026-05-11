@@ -3,6 +3,7 @@ import { Observable, Subject, BehaviorSubject, timer, empty } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { catchError, retry, takeUntil } from 'rxjs/operators';
 import { MOCK_GRID_STATE } from '../mock-data';
+import { environment } from '../../../environments/environment';
 
 export interface GridState {
   gridId: { uuid: string };
@@ -70,20 +71,8 @@ export class WebSocketService implements OnDestroy {
   }
 
   private getWebSocketUrl(): string {
-    // Try Vercel environment variable first
-    const vercelEnv = (window as any).__VERCEL_ENV__;
-    if (vercelEnv?.API_URL_BACK) {
-      // Replace ws:// with wss:// and http with ws
-      let url = vercelEnv.API_URL_BACK;
-      if (url.startsWith('http://')) {
-        url = 'ws://' + url.substring(7);
-      } else if (url.startsWith('https://')) {
-        url = 'wss://' + url.substring(8);
-      }
-      return url + '/grid-websocket';
-    }
-    // Fallback to localhost
-    return 'ws://localhost:8080/grid-websocket';
+    // Use environment config
+    return environment.wsUrl;
   }
 
   connect(url?: string): void {
